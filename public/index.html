@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#02060a">
+    <title>example.invalid</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/style.css">
+    <script type="module" src="js/main.js"></script>
+</head>
+<body>
+    <canvas class="portal" data-portal-canvas aria-hidden="true"></canvas>
+
+    <main class="contact">
+        <h1 class="visually-hidden">example.invalid</h1>
+        <a class="contact__link" href="mailto:contact@example.invalid">
+            <svg class="contact__icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true" focusable="false">
+                <rect x="3" y="5" width="18" height="14"/>
+                <path d="M3 6l9 7 9-7"/>
+            </svg>
+            <span>contact@example.invalid</span>
+        </a>
+    </main>
+
+    <button class="motion-toggle" type="button" data-motion-toggle data-state="playing" hidden>
+        <svg class="motion-toggle__icon motion-toggle__icon--pause" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+            <rect x="6" y="5" width="4" height="14"/>
+            <rect x="14" y="5" width="4" height="14"/>
+        </svg>
+        <svg class="motion-toggle__icon motion-toggle__icon--play" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true" focusable="false">
+            <path d="M7 5v14l12-7z"/>
+        </svg>
+        <span class="visually-hidden" data-motion-label>Animation anhalten</span>
+    </button>
+</body>
+</html>

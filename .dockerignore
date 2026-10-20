@@ -1,0 +1,4 @@
+# Allowlist: only the web root and the server configuration end up in the build context.
+*
+!nginx/default.conf
+!public/

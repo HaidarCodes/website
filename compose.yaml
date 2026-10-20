@@ -1,0 +1,23 @@
+name: static-portal-site
+
+services:
+  website:
+    image: static-portal-site:local
+    build:
+      context: .
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      proxy:
+        aliases:
+          - static-portal-site
+
+networks:
+  proxy:
+    external: true
