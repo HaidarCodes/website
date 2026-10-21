@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { SLOT_PERIOD, SLOT_SHIFT, SLOT_TEXELS, createLayers, offsetPeriod } from '../public/js/portal-layers.js';
+import { PATTERN_SIZE, createLayers, offsetPeriod } from '../public/js/portal-layers.js';
 import { createFragmentShader } from '../public/js/portal-renderer.js';
 import { packLayerColor, packLayerOffsets, packLayerShape } from '../public/js/portal-uniforms.js';
 
@@ -84,11 +84,9 @@ describe('createFragmentShader', () => {
     assert.match(createFragmentShader(7), /#define LAYER_COUNT 7\n/);
   });
 
-  it('uses the same slot geometry and period as the JavaScript offset wrapping', () => {
+  it('wraps texel lookups at the same pattern size as the JavaScript offset wrapping', () => {
     const shader = createFragmentShader(1);
-    assert.equal(1 << SLOT_SHIFT, SLOT_TEXELS);
-    assert.match(shader, new RegExp(`const int SLOT_SHIFT = ${SLOT_SHIFT};`));
-    assert.match(shader, new RegExp(`const int SLOT_TEXELS = ${SLOT_TEXELS};`));
-    assert.match(shader, new RegExp(`const int PERIOD_MASK = ${SLOT_PERIOD - 1};`));
+    assert.match(shader, new RegExp(`const int PATTERN_MASK = ${PATTERN_SIZE - 1};`));
+    assert.match(shader, /texelFetch\(uPattern, texel, 0\)/);
   });
 });

@@ -1,12 +1,8 @@
-export const DEFAULT_LAYER_COUNT = 14;
+export const DEFAULT_LAYER_COUNT = 15;
 export const DEFAULT_SEED = 0x6e6f75;
 
-// Each layer is split into square slots of SLOT_TEXELS² texels holding at most one star.
-export const SLOT_SHIFT = 4;
-export const SLOT_TEXELS = 1 << SLOT_SHIFT;
-
-// The star pattern repeats after this many slots per axis, which lets layer offsets wrap seamlessly.
-export const SLOT_PERIOD = 2048;
+// Texels per axis of the tileable particle texture; a power of two so the shader can mask indices.
+export const PATTERN_SIZE = 256;
 
 const FULL_TURN = Math.PI * 2;
 
@@ -41,14 +37,16 @@ export function hslToRgb(hue, saturation, lightness) {
 }
 
 export function offsetPeriod(layer) {
-  return layer.texelSize * SLOT_TEXELS * SLOT_PERIOD;
+  return layer.texelSize * PATTERN_SIZE;
 }
 
 /**
  * Builds the parallax layers of the portal background, ordered from far (index 0) to near.
- * Far layers are small, dim and violet; near layers are larger, brighter and teal.
- * Sizes and speeds are in CSS pixels, angles in radians, density is the chance that a slot
- * holds a star, parallax is how strongly a layer follows the dragged camera, colours are 0..1 RGB.
+ * Every layer samples the same particle texture, rotated by its own angle and drifting along
+ * the streak axis. Far layers are small, dim and violet; near layers are larger, brighter, teal.
+ * Sizes and speeds are in CSS pixels, angles in radians, density is the share of the texture's
+ * streaks a layer shows, parallax is how strongly a layer follows the dragged camera,
+ * colours are 0..1 RGB.
  */
 export function createLayers({ count = DEFAULT_LAYER_COUNT, seed = DEFAULT_SEED } = {}) {
   if (!Number.isInteger(count) || count < 1) {
@@ -59,16 +57,16 @@ export function createLayers({ count = DEFAULT_LAYER_COUNT, seed = DEFAULT_SEED 
 
   return Array.from({ length: count }, (_, index) => {
     const depth = count === 1 ? 1 : index / (count - 1);
-    const hue = lerp(255, 178, depth) + lerp(-14, 14, random());
-    const saturation = lerp(0.4, 0.65, random());
-    // Far layers are so dim and fine that they read as grain rather than as separate stars.
-    const intensity = lerp(0.09, 0.8, depth ** 2);
+    const hue = lerp(265, 160, depth) + lerp(-15, 15, random());
+    const saturation = lerp(0.45, 0.7, random());
+    // Far layers are so dim and fine that they read as grain rather than as separate particles.
+    const intensity = lerp(0.3, 1, depth ** 1.5);
 
     return {
       angle: random() * FULL_TURN,
-      texelSize: lerp(2, 3.5, depth ** 1.2),
-      density: lerp(0.075, 0.012, depth ** 0.6),
-      speed: lerp(2, 7, depth) * lerp(0.8, 1.2, random()),
+      texelSize: lerp(2, 5, depth ** 1.3),
+      density: lerp(0.35, 0.12, depth ** 0.7),
+      speed: lerp(3, 9, depth) * lerp(0.8, 1.2, random()),
       parallax: lerp(0.12, 1, depth),
       color: hslToRgb(hue, saturation, 0.5).map((channel) => channel * intensity),
     };

@@ -3,8 +3,7 @@ import { describe, it } from 'node:test';
 
 import {
   DEFAULT_LAYER_COUNT,
-  SLOT_PERIOD,
-  SLOT_TEXELS,
+  PATTERN_SIZE,
   createLayers,
   createRandom,
   hslToRgb,
@@ -61,25 +60,25 @@ describe('createLayers', () => {
     }
   });
 
-  it('orders layers from far (fine, faint grain) to near (larger, brighter, sparser stars)', () => {
+  it('orders layers from far (fine, faint grain) to near (larger, brighter, sparser particles)', () => {
     const layers = createLayers();
     for (let i = 1; i < layers.length; i += 1) {
       assert.ok(layers[i].texelSize >= layers[i - 1].texelSize);
       assert.ok(layers[i].density <= layers[i - 1].density);
       assert.ok(layers[i].parallax > layers[i - 1].parallax);
     }
-    assert.ok(brightness(layers.at(-1)) > 4 * brightness(layers[0]));
+    assert.ok(brightness(layers.at(-1)) > 2 * brightness(layers[0]));
   });
 
   it('keeps the field sparse and every value in its expected range', () => {
     for (const layer of createLayers({ count: 32, seed: 99 })) {
       assert.ok(layer.angle >= 0 && layer.angle < Math.PI * 2);
-      assert.ok(layer.texelSize >= 2 && layer.texelSize <= 3.5);
-      assert.ok(layer.speed > 0 && layer.speed < 10);
-      assert.ok(layer.density > 0 && layer.density <= 0.075);
+      assert.ok(layer.texelSize >= 2 && layer.texelSize <= 5);
+      assert.ok(layer.speed > 0 && layer.speed < 12);
+      assert.ok(layer.density > 0 && layer.density <= 0.5);
       assert.ok(layer.parallax > 0 && layer.parallax <= 1);
       for (const channel of layer.color) {
-        assert.ok(Number.isFinite(channel) && channel >= 0 && channel <= 0.8);
+        assert.ok(Number.isFinite(channel) && channel >= 0 && channel <= 1);
       }
     }
   });
@@ -96,14 +95,12 @@ describe('createLayers', () => {
   });
 });
 
-describe('slot geometry', () => {
-  it('uses a power-of-two slot size and period so the shader can mask indices', () => {
-    for (const value of [SLOT_TEXELS, SLOT_PERIOD]) {
-      assert.ok(Number.isInteger(Math.log2(value)), `${value} is not a power of two`);
-    }
+describe('pattern geometry', () => {
+  it('uses a power-of-two pattern size so the shader can mask texel indices', () => {
+    assert.ok(Number.isInteger(Math.log2(PATTERN_SIZE)));
   });
 
-  it('wraps offsets after exactly one full slot period', () => {
-    assert.equal(offsetPeriod({ texelSize: 2.5 }), 2.5 * SLOT_TEXELS * SLOT_PERIOD);
+  it('wraps offsets after exactly one pattern tile', () => {
+    assert.equal(offsetPeriod({ texelSize: 2.5 }), 2.5 * PATTERN_SIZE);
   });
 });

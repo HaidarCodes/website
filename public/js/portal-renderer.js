@@ -6,8 +6,9 @@ import {
   endDrag,
   isCameraSettled,
 } from './portal-camera.js';
-import { SLOT_PERIOD, SLOT_SHIFT, SLOT_TEXELS, createLayers } from './portal-layers.js';
+import { PATTERN_SIZE, createLayers } from './portal-layers.js';
 import { advanceMotion, createMotionState } from './portal-motion.js';
+import { createPattern } from './portal-pattern.js';
 import { packLayerColor, packLayerOffsets, packLayerShape } from './portal-uniforms.js';
 import { computeRenderSize } from './render-size.js';
 
@@ -28,44 +29,31 @@ export function createFragmentShader(layerCount) {
   return `#version 300 es
 precision highp float;
 precision highp int;
+precision mediump sampler2D;
 
 #define LAYER_COUNT ${layerCount}
 
-const int SLOT_SHIFT = ${SLOT_SHIFT};
-const int SLOT_TEXELS = ${SLOT_TEXELS};
-const int PERIOD_MASK = ${SLOT_PERIOD - 1};
+const int PATTERN_MASK = ${PATTERN_SIZE - 1};
+const float GRAIN_TEXEL = 3.0;
+const vec3 BASE_COLOR = vec3(0.016, 0.052, 0.062);
 
 uniform vec2 uResolution;
 uniform float uPixelScale;
+uniform sampler2D uPattern;
 uniform vec4 uLayerShape[LAYER_COUNT];
 uniform vec3 uLayerColor[LAYER_COUNT];
 uniform vec2 uLayerOffset[LAYER_COUNT];
 
 out vec4 fragColor;
 
-uint mixBits(uint value) {
-  value ^= value >> 16u;
-  value *= 0x7feb352du;
-  value ^= value >> 15u;
-  value *= 0x846ca68bu;
-  value ^= value >> 16u;
-  return value;
-}
-
-uint hashSlot(ivec2 slot, uint layer) {
-  uvec2 key = uvec2(slot & ivec2(PERIOD_MASK));
-  return mixBits(key.x ^ mixBits(key.y ^ mixBits(layer + 0x9e3779b9u)));
-}
-
-float toUnit(uint value) {
-  return float(value >> 8u) / 16777216.0;
-}
-
 void main() {
   vec2 position = gl_FragCoord.xy / uPixelScale - 0.5 * uResolution;
   float radius = length(position) / max(0.5 * length(uResolution), 1.0);
 
-  vec3 color = mix(vec3(0.016, 0.048, 0.085), vec3(0.005, 0.015, 0.03), smoothstep(0.0, 1.0, radius));
+  // Masking with a power-of-two size wraps negative texel indices as well.
+  ivec2 grainTexel = ivec2(floor(position / GRAIN_TEXEL)) & ivec2(PATTERN_MASK);
+  float grain = texelFetch(uPattern, grainTexel, 0).b;
+  vec3 color = BASE_COLOR * (0.45 + 0.9 * grain * grain);
 
   for (int index = 0; index < LAYER_COUNT; index++) {
     vec4 shape = uLayerShape[index];
@@ -74,27 +62,10 @@ void main() {
       shape.y * position.x + shape.x * position.y
     ) + uLayerOffset[index];
 
-    // Signed shift and mask act as floor division and modulo, also for negative texels.
-    ivec2 texel = ivec2(floor(local / shape.z));
-    ivec2 slot = texel >> SLOT_SHIFT;
-    ivec2 inSlot = texel & ivec2(SLOT_TEXELS - 1);
-
-    uint hash = hashSlot(slot, uint(index));
-    if (toUnit(hash) >= shape.w) {
-      continue;
-    }
-
-    // A short dash of mostly 1-2 texels. It never touches the slot's last row or column, so
-    // stars of neighbouring slots always keep a gap.
-    uint form = mixBits(hash);
-    uint pick = form & 7u;
-    int dashLength = pick < 5u ? 1 : (pick < 7u ? 2 : 3);
-    int startX = int((form >> 3u) % uint(SLOT_TEXELS - dashLength));
-    int startY = int((form >> 11u) % uint(SLOT_TEXELS - 1));
-
-    if (inSlot.y == startY && inSlot.x >= startX && inSlot.x < startX + dashLength) {
-      color += uLayerColor[index] * (0.6 + 0.4 * toUnit(mixBits(form)));
-    }
+    // Unfiltered texel lookups keep every particle a crisp, rotated block of square pixels.
+    ivec2 texel = ivec2(floor(local / shape.z)) & ivec2(PATTERN_MASK);
+    vec4 particle = texelFetch(uPattern, texel, 0);
+    color += uLayerColor[index] * particle.r * step(particle.g, shape.w);
   }
 
   color *= 1.0 - 0.35 * smoothstep(0.55, 1.3, radius);
@@ -115,7 +86,29 @@ function compileShader(gl, type, source) {
   return shader;
 }
 
-function createResources(gl, layers) {
+function uploadPattern(gl, pattern) {
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA8,
+    pattern.size,
+    pattern.size,
+    0,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    pattern.data,
+  );
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+}
+
+function createResources(gl, layers, pattern) {
   const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
   const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, createFragmentShader(layers.length));
   const program = gl.createProgram();
@@ -140,6 +133,8 @@ function createResources(gl, layers) {
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
   gl.useProgram(program);
+  uploadPattern(gl, pattern);
+  gl.uniform1i(gl.getUniformLocation(program, 'uPattern'), 0);
   gl.uniform4fv(gl.getUniformLocation(program, 'uLayerShape'), packLayerShape(layers));
   gl.uniform3fv(gl.getUniformLocation(program, 'uLayerColor'), packLayerColor(layers));
 
@@ -170,9 +165,10 @@ export function createPortalRenderer(canvas, { layers = createLayers(), onFailur
     return null;
   }
 
+  const pattern = createPattern();
   let resources;
   try {
-    resources = createResources(gl, layers);
+    resources = createResources(gl, layers, pattern);
   } catch (error) {
     console.warn(error);
     return null;
@@ -259,7 +255,7 @@ export function createPortalRenderer(canvas, { layers = createLayers(), onFailur
 
   canvas.addEventListener('webglcontextrestored', () => {
     try {
-      resources = createResources(gl, layers);
+      resources = createResources(gl, layers, pattern);
     } catch (error) {
       console.warn(error);
       onFailure(error);

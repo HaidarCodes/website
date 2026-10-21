@@ -13,14 +13,18 @@ const scripts = readdirSync(join(publicDir, 'js')).filter((name) => name.endsWit
 
 describe('index.html', () => {
   it('shows the contact address as a mailto link', () => {
-    assert.match(html, /<a\b[^>]*href="mailto:contact@nou\.red"/);
-    assert.match(html, />contact@nou\.red</);
+    assert.match(html, /<a\b[^>]*href="mailto:@@CONTACT_EMAIL@@"/);
+    assert.match(html, />@@CONTACT_EMAIL@@</);
+  });
+
+  it('keeps the "Coming soon!" note from the previous page', () => {
+    assert.match(html, />Coming soon!</);
   });
 
   it('declares language, viewport and title', () => {
     assert.match(html, /<html lang="de">/);
     assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1\.0">/);
-    assert.match(html, /<title>nou\.red<\/title>/);
+    assert.match(html, /<title>@@SITE_NAME@@<\/title>/);
   });
 
   it('works with the strict CSP: no inline scripts, styles or event handlers', () => {
