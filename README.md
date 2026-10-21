@@ -24,12 +24,6 @@ npm run preview
 
 The container preview uses neutral placeholder values; production branding is not stored locally.
 
-## Why Docker?
-
-Docker is not required to serve this static site; any suitable web server can host `public/`.
-The container is used because it fits the existing proxy and deployment setup, packages nginx and
-the site as one reproducible release, and runs with a read-only filesystem and an unprivileged user.
-
 ## Deployment
 
 GitHub Actions checks pull requests and pushes to `main`. Automatic deployment requires a Linux
@@ -37,7 +31,18 @@ self-hosted runner with Docker and a protected `production` environment. Add `PU
 `PUBLIC_CONTACT_EMAIL` as environment secrets. BuildKit uses them to render the site; the values
 appear in the public page, so only use values intended for publication.
 
-The container is available on the external Compose network `proxy` at `static-portal-site:8080`.
+| Secret | Example |
+| --- | --- |
+| `PUBLIC_SITE_NAME` | `example.com` |
+| `PUBLIC_CONTACT_EMAIL` | `contact@example.com` |
+
+Enter values without quotes, surrounding whitespace, line breaks, `https://` or `mailto:`.
+Invalid configuration stops deployment with the variable name and expected format, never its value.
+
+Deployment builds and starts the container on the runner's Docker host, not on GitHub.
+The external Compose network `proxy` must already exist; the reverse proxy reaches the container
+at `static-portal-site:8080`, with no host port published.
+
 
 ## Note
 

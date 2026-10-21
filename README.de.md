@@ -38,7 +38,23 @@ Repository einen Linux-Self-Hosted-Runner mit Docker und ein geschütztes Enviro
 Lege `PUBLIC_SITE_NAME` und `PUBLIC_CONTACT_EMAIL` dort als Secrets an. BuildKit rendert damit die
 Seite; die Werte sind anschließend öffentlich sichtbar und müssen zur Veröffentlichung bestimmt sein.
 
-Der Container ist im externen Compose-Netz `proxy` unter `static-portal-site:8080` erreichbar.
+| Secret | Beispiel |
+| --- | --- |
+| `PUBLIC_SITE_NAME` | `example.invalid` |
+| `PUBLIC_CONTACT_EMAIL` | `contact@example.invalid` |
+
+Werte ohne Anführungszeichen, umgebende Leerzeichen, Zeilenumbrüche, `https://` oder `mailto:` eingeben.
+Ungültige Konfiguration stoppt das Deployment mit Variablenname und erwartetem Format, nie mit dem Wert.
+Nach einer Secret-Korrektur in GitHub Actions **Re-run failed jobs** wählen; ein neuer Commit ist nicht nötig.
+
+Das Deployment baut und startet den Container auf dem Docker-Host des Runners, nicht bei GitHub.
+Das externe Compose-Netz `proxy` muss bereits existieren; der Reverse Proxy erreicht den Container
+unter `static-portal-site:8080`, ohne veröffentlichten Host-Port.
+
+Den Deployment-Runner als eigenen Nicht-root-Dienstbenutzer betreiben, nicht als persönlichen Admin.
+Docker-Zugriff entspricht praktisch root-Zugriff: Nicht vertrauenswürdige PR-Jobs bleiben auf GitHub-Runnern.
+Im konfigurierten Runner-Verzeichnis installieren und starten `sudo ./svc.sh install RUNNER_USER` und
+`sudo ./svc.sh start` den Dienst samt Autostart; prüfen mit `sudo ./svc.sh status`.
 
 ## Hinweis
 

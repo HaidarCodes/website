@@ -82,6 +82,16 @@ describe('container', () => {
     assert.match(deploy, /--secret id=public_site_name,env=PUBLIC_SITE_NAME/);
     assert.match(deploy, /--secret id=public_contact_email,env=PUBLIC_CONTACT_EMAIL/);
   });
+
+  it('validates branding before deployment and uses the same validator in the image build', () => {
+    const deploy = read('.github', 'workflows', 'deploy.yml');
+    const dockerfile = read('Dockerfile');
+    assert.match(deploy, /sh scripts\/validate-branding\.sh/);
+    assert.ok(deploy.indexOf('sh scripts/validate-branding.sh') < deploy.indexOf('docker build'));
+    assert.match(dockerfile, /--mount=type=bind,source=scripts\/validate-branding\.sh,target=\/tmp\/validate-branding\.sh/);
+    assert.match(dockerfile, /PUBLIC_SITE_NAME="\$site_name" PUBLIC_CONTACT_EMAIL="\$contact_email" \\\n\s+sh \/tmp\/validate-branding\.sh;/);
+    assert.match(read('.dockerignore'), /^!scripts\/validate-branding\.sh$/m);
+  });
 });
 
 describe('dependencies', () => {

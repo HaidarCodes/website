@@ -10,20 +10,20 @@ COPY public/ /srv/www/
 USER root
 RUN --mount=type=secret,id=public_site_name,required=false \
     --mount=type=secret,id=public_contact_email,required=false \
+    --mount=type=bind,source=scripts/validate-branding.sh,target=/tmp/validate-branding.sh \
     set -eu; \
     site_name="Website"; \
     contact_email="contact@example.invalid"; \
     if [ -f /run/secrets/public_site_name ]; then \
-      site_name="$(cat /run/secrets/public_site_name)"; \
+      site_name="$(cat /run/secrets/public_site_name; printf '.')"; \
+      site_name="${site_name%.}"; \
     fi; \
     if [ -f /run/secrets/public_contact_email ]; then \
-      contact_email="$(cat /run/secrets/public_contact_email)"; \
+      contact_email="$(cat /run/secrets/public_contact_email; printf '.')"; \
+      contact_email="${contact_email%.}"; \
     fi; \
-    case "$site_name" in ''|*[!A-Za-z0-9.-]*) exit 1 ;; esac; \
-    case "$contact_email" in ''|*[!A-Za-z0-9._%+@-]*) exit 1 ;; esac; \
-    [ "${#site_name}" -le 253 ]; \
-    [ "${#contact_email}" -le 254 ]; \
-    printf '%s' "$contact_email" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; \
+    PUBLIC_SITE_NAME="$site_name" PUBLIC_CONTACT_EMAIL="$contact_email" \
+      sh /tmp/validate-branding.sh; \
     sed -e "s|@@SITE_NAME@@|$site_name|g" \
         -e "s|@@CONTACT_EMAIL@@|$contact_email|g" \
         /srv/www/index.html > /tmp/index.html; \

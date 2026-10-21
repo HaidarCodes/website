@@ -1,4 +1,7 @@
-# Allowlist: only the web root and the server configuration end up in the build context.
+# Allowlist: web root, server configuration and build-time branding validation.
 *
 !nginx/default.conf
 !public/
+!scripts/
+scripts/*
+!scripts/validate-branding.sh

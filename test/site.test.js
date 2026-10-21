@@ -98,6 +98,8 @@ describe('JavaScript modules', () => {
 describe('README files', () => {
   const english = read('README.md');
   const german = read('README.de.md');
+  const publicEmail =
+    /\b[A-Z0-9._%+-]+@(?!(?:example\.(?:invalid|com|net|org))(?![A-Z0-9.-]))[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 
   it('provides concise English and German versions with reciprocal links', () => {
     assert.match(english, /^\[English\].*\[Deutsch\]/m);
@@ -107,9 +109,16 @@ describe('README files', () => {
   });
 
   it('does not publish real contact addresses in tracked documentation', () => {
-    const publicEmail =
-      /\b[A-Z0-9._%+-]+@(?!(?:example\.invalid)\b)[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
-    assert.doesNotMatch(english, publicEmail);
-    assert.doesNotMatch(german, publicEmail);
+    assert.equal(publicEmail.test(english), false, 'English README contains a non-placeholder contact address.');
+    assert.equal(publicEmail.test(german), false, 'German README contains a non-placeholder contact address.');
+  });
+
+  it('only exempts exact reserved example domains from the contact-address check', () => {
+    for (const domain of ['example.invalid', 'example.com', 'example.net', 'example.org']) {
+      assert.equal(publicEmail.test(`contact@${domain}`), false);
+    }
+    for (const domain of ['private.invalid', 'example.com.private.invalid', 'example.invalid.private.invalid']) {
+      assert.equal(publicEmail.test(`contact@${domain}`), true);
+    }
   });
 });
