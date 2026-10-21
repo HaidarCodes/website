@@ -90,3 +90,22 @@ describe('JavaScript modules', () => {
     }
   });
 });
+
+describe('README files', () => {
+  const english = read('README.md');
+  const german = read('README.de.md');
+
+  it('provides concise English and German versions with reciprocal links', () => {
+    assert.match(english, /^\[English\].*\[Deutsch\]/m);
+    assert.match(german, /^\[English\].*\[Deutsch\]/m);
+    assert.match(english, /README\.de\.md/);
+    assert.match(german, /README\.md/);
+  });
+
+  it('does not publish real contact addresses in tracked documentation', () => {
+    const publicEmail =
+      /\b[A-Z0-9._%+-]+@(?!(?:example\.invalid)\b)[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+    assert.doesNotMatch(english, publicEmail);
+    assert.doesNotMatch(german, publicEmail);
+  });
+});
