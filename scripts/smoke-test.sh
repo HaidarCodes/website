@@ -39,6 +39,10 @@ done
 
 body="$(curl -fsS "$BASE_URL/")"
 grep -Fq 'href="mailto:contact@example.invalid"' <<<"$body" || fail "contact link missing"
+grep -Fq 'Coming soon!' <<<"$body" || fail "coming soon note missing"
+if grep -Fq '@@' <<<"$body"; then
+  fail "unrendered page template"
+fi
 
 headers="$(curl -fsS -o /dev/null -D - "$BASE_URL/")"
 for expected in \

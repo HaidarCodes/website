@@ -2,13 +2,13 @@
   "name": "static-portal-site",
   "private": true,
   "version": "1.0.0",
-  "description": "Static landing page for example.invalid with a procedural portal background",
+  "description": "Static landing page with a procedural portal background",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
-    "check": "node --check public/js/main.js && node --check public/js/motion-preference.js && node --check public/js/portal-camera.js && node --check public/js/portal-drag.js && node --check public/js/portal-layers.js && node --check public/js/portal-motion.js && node --check public/js/portal-renderer.js && node --check public/js/portal-uniforms.js && node --check public/js/render-size.js",
+    "check": "node --check public/js/main.js && node --check public/js/motion-preference.js && node --check public/js/portal-camera.js && node --check public/js/portal-drag.js && node --check public/js/portal-layers.js && node --check public/js/portal-motion.js && node --check public/js/portal-pattern.js && node --check public/js/portal-renderer.js && node --check public/js/portal-uniforms.js && node --check public/js/render-size.js",
     "lint": "eslint .",
     "test": "node --test \"test/**/*.test.js\"",
     "preview": "docker build -t static-portal-site:preview . && docker run --rm --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -p 8080:8080 static-portal-site:preview"

@@ -7,6 +7,30 @@ ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY public/ /srv/www/
 
+USER root
+RUN --mount=type=secret,id=public_site_name,required=false \
+    --mount=type=secret,id=public_contact_email,required=false \
+    set -eu; \
+    site_name="Website"; \
+    contact_email="contact@example.invalid"; \
+    if [ -f /run/secrets/public_site_name ]; then \
+      site_name="$(cat /run/secrets/public_site_name)"; \
+    fi; \
+    if [ -f /run/secrets/public_contact_email ]; then \
+      contact_email="$(cat /run/secrets/public_contact_email)"; \
+    fi; \
+    case "$site_name" in ''|*[!A-Za-z0-9.-]*) exit 1 ;; esac; \
+    case "$contact_email" in ''|*[!A-Za-z0-9._%+@-]*) exit 1 ;; esac; \
+    [ "${#site_name}" -le 253 ]; \
+    [ "${#contact_email}" -le 254 ]; \
+    printf '%s' "$contact_email" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; \
+    sed -e "s|@@SITE_NAME@@|$site_name|g" \
+        -e "s|@@CONTACT_EMAIL@@|$contact_email|g" \
+        /srv/www/index.html > /tmp/index.html; \
+    mv /tmp/index.html /srv/www/index.html
+
+USER 101
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
